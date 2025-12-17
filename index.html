@@ -7,7 +7,7 @@
     <style>
         :root {
             --bg-color: #bdad93;
-            --card-bg: #969e7f;
+            --card-bg: #68705b;
             --text-color: #ffffff;
             --highlight: #9eae7d;
             --success: #429eba;
@@ -142,7 +142,7 @@
 
 <script>
 
-    const API_BASE = "https://3m9lxn3oef.execute-api.us-east-1.amazonaws.com/prod"; 
+    const API_BASE = "https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/";
 
     const SENSORS = ['temp-1', 'hum-1', 'light-1'];
 
@@ -194,7 +194,7 @@
         document.getElementById('error-loading').style.display = 'block';
 
         try {
-            const res = await fetch(`https://3m9lxn3oef.execute-api.us-east-1.amazonaws.com/prod/errors`);
+            const res = await fetch(`https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/errors`);
             const data = await res.json();
             
             const container = document.getElementById('error-list');
