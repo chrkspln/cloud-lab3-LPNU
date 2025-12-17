@@ -159,7 +159,7 @@
         document.getElementById('history-table').style.display = 'none';
         
         try {
-            const res = await fetch(`${API_BASE}/iot?sensor_id=${sensorId}`); 
+            const res = await fetch(`${API_BASE}?action=iot&sensor_id=${sensorId}`);
             const data = await res.json();
             
             const tbody = document.getElementById('history-body');
@@ -194,7 +194,7 @@
         document.getElementById('error-loading').style.display = 'block';
 
         try {
-            const res = await fetch(`https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/errors`);
+            const res = await fetch(`${API_BASE}?action=errors`);
             const data = await res.json();
             
             const container = document.getElementById('error-list');
