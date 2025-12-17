@@ -38,15 +38,25 @@ def run_sensor(sensor_conf, url):
 
     print(f"Started sensor: {device_id} ({sensor_conf['type']}) | Interval: {sensor_conf['interval_ms']}ms")
 
+    headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': api_key
+    }
+
     while True:
         try:
             if random.random() < 0.1:
-                broken_payload = "THIS IS NOT A JSON AND WILL BREAK SERVER"
+                broken_payload = {
+                    "sensor_id": None,
+                    "timestamp": "not-a-date",
+                    "type": "unknown",
+                    "value": "NaN"
+                }
 
                 response = requests.post(
                     url,
                     data=broken_payload,
-                    headers={'Content-Type': 'application/json'},
+                    headers=headers,
                     timeout=5
                 )
                 print(f"[{device_id}] >>> Sent BROKEN data (Test DLQ)")
@@ -56,12 +66,14 @@ def run_sensor(sensor_conf, url):
                 response = requests.post(
                     url,
                     json=data,
-                    headers={'Content-Type': 'application/json'},
+                    headers=headers,
                     timeout=5
                 )
 
             if response.status_code != 200:
                 print(f"[{device_id}] Server responded: {response.status_code} - {response.text}")
+            else:
+                print(f"[{device_id}] Sent OK")
 
             time.sleep(interval_sec)
 
@@ -73,6 +85,7 @@ def run_sensor(sensor_conf, url):
 if __name__ == "__main__":
     try:
         config = load_config()
+        api_key = config.get("x-api-key")
         target_url = config.get('queue_url')
 
         if not target_url:
