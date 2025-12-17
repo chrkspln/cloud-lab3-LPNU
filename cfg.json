@@ -1,5 +1,5 @@
 {
-  "queue_url": "https://qls62bqep4.execute-api.us-east-1.amazonaws.com/prod/data",
+  "queue_url": "https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/data",
   "x-api-key": "${X_API_KEY}",
   "sensors": [
     {
