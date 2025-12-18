@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS IoT Serverless Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --text-color: #e94560;
+            --highlight: #0f3460;
+            --success: #2ecc71;
+            --error: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        h1 { text-align: center; color: var(--text-color); margin-bottom: 30px; }
+        
+        .controls {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        select, input {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background-color: #333;
+            color: white;
+            font-size: 1em;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn-refresh { background-color: var(--highlight); color: white; }
+        .btn-refresh:hover { background-color: #1a5c9e; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        h2 { border-bottom: 2px solid var(--highlight); padding-bottom: 10px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #333;
+        }
+
+        th { color: var(--text-color); }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .status-ok { background: rgba(46, 204, 113, 0.2); color: var(--success); }
+        .status-err { background: rgba(231, 76, 60, 0.2); color: var(--error); }
+
+        pre { white-space: pre-wrap; word-wrap: break-word; font-size: 0.9em; color: #ccc;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>AWS IoT Serverless Dashboard</h1>
+
+    <div class="controls">
+        <label for="sensor-select" style="color:#ccc;">Обрати сенсор:</label>
+        <select id="sensor-select" onchange="loadHistory()">
+            <option value="temp-1">Температура (temp-1)</option>
+            <option value="hum-1">Вологість (hum-1)</option>
+            <option value="light-1">Освітленість (light-1)</option>
+        </select>
+        <button onclick="loadData()" class="btn-refresh">🔄 Оновити все</button>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <h2>📊 Історія вимірювань (<span id="current-sensor-display">temp-1</span>)</h2>
+            <div id="history-loading">Завантаження...</div>
+            <table id="history-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Час</th>
+                        <th>Значення</th>
+                        <th>Координати</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
+        </div>
+
+        <div class="panel">
+            <h2>🗑️ Оброблені помилки (DLQ)</h2>
+            <div id="error-loading">Завантаження...</div>
+            <div id="error-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    const API_BASE = "https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/lpnu-clouds-lab3-handler";
+
+    const SENSORS = ['temp-1', 'hum-1', 'light-1'];
+
+    function loadData() {
+        const selectedSensor = document.getElementById('sensor-select').value;
+        loadHistory(selectedSensor);
+        loadErrors();
+    }
+    
+    async function loadHistory() {
+        const sensorId = document.getElementById('sensor-select').value;
+        document.getElementById('current-sensor-display').innerText = sensorId;
+        document.getElementById('history-loading').style.display = 'block';
+        document.getElementById('history-table').style.display = 'none';
+        
+        try {
+            const res = await fetch(`${API_BASE}?action=iot&sensor_id=${sensorId}`);
+            const data = await res.json();
+            
+            const tbody = document.getElementById('history-body');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:gray;">Даних для ${sensorId} ще немає.</td></tr>`;
+            } else {
+                data.forEach(item => {
+                    const coords = `${item.location.lat}, ${item.location.lon}`;
+                    const row = `
+                        <tr>
+                            <td>${new Date(item.timestamp).toLocaleTimeString('uk-UA', {hour12: false})}</td>
+                            <td><span class="status-badge status-ok">${item.value} ${item.unit}</span></td>
+                            <td>${coords}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+
+            document.getElementById('history-loading').style.display = 'none';
+            document.getElementById('history-table').style.display = 'table';
+            
+        } catch (e) {
+            console.error("History error:", e);
+            document.getElementById('history-loading').innerText = "Помилка завантаження історії. Перевірте консоль (CORS/API_BASE).";
+        }
+    }
+
+    async function loadErrors() {
+        document.getElementById('error-loading').style.display = 'block';
+
+        try {
+            const res = await fetch(`${API_BASE}?action=errors`);
+            const data = await res.json();
+            
+            const container = document.getElementById('error-list');
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="color:gray">Черга помилок (DLQ) пуста.</p>';
+            }
+
+            data.forEach(err => {
+                let rawDataDisplay = err.raw_body;
+                try {
+                    const parsed = JSON.parse(err.raw_body);
+                    rawDataDisplay = JSON.stringify(parsed, null, 2); 
+                } catch (e) {
+                }
+                
+                const card = `
+                    <div style="background:rgba(0,0,0,0.2); padding:10px; margin-bottom:15px; border-left: 3px solid var(--error);">
+                        <div style="font-size:0.8em; color:gray;">ID: ${err.message_id.substring(0, 10)}...</div>
+                        <div style="margin: 5px 0;"><strong>Час обробки:</strong> ${new Date(err.timestamp).toLocaleTimeString('uk-UA', {hour12: false})}</div>
+                        <div><strong style="color:var(--error);">Тіло, що викликало помилку:</strong></div>
+                        <pre style="color: #f1948a;">${rawDataDisplay}</pre>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+            document.getElementById('error-loading').style.display = 'none';
+        } catch (e) {
+            console.error("Error log failed:", e);
+            document.getElementById('error-loading').innerText = "Не вдалося отримати логи помилок. Перевірте CORS/API_BASE.";
+        }
+    }
+
+    window.onload = loadData;
+</script>
+
+</body>
+</html>
