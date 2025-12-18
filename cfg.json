@@ -1,5 +1,5 @@
 {
-  "queue_url": "https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/",
+  "queue_url": "https://qls62bqep4.execute-api.eu-north-1.amazonaws.com/prod/lpnu-clouds-lab3-handler",
   "x-api-key": "${X_API_KEY}",
   "sensors": [
     {
